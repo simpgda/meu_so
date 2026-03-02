@@ -29,6 +29,6 @@ make run
 - Transição para C: Configuração da pilha (stack) e chamada da função principal kmain em C.
 
 ## Entrega parcial (02/03) - CAP: 04, 05, 06
-- Output: Implementação de drivers para Framebuffer (saída de vídeo VGA) e Porta Serial (COM1 para logs).
-- GDT (Global Descriptor Table): Configuração da segmentação de memória para permitir o acesso aos 4GB de endereçamento em modo protegido.
-- IDT & Interrupções: Criação da Interrupt Descriptor Table e configuração do PIC para capturar eventos de hardware, como o Driver de Teclado.
+- Output: Implementação de drivers para Framebuffer (saída de vídeo VGA) e Porta Serial (COM1 para logs). (Gabriel de Albuquerque Simplício e João Henrique Alvez de Sousa)
+- GDT (Global Descriptor Table): Configuração da segmentação de memória para permitir o acesso aos 4GB de endereçamento em modo protegido. (João Pedro Lima Dantas)
+- IDT & Interrupções: Criação da Interrupt Descriptor Table e configuração do PIC para capturar eventos de hardware, como o Driver de Teclado. (Lucas Franca de Melo Batista)
