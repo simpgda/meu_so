@@ -10,7 +10,7 @@ Projeto de desenvolvimento de um Kernel simples (x86), implementando bootloader,
 - Lucas Franca de Melo Batista
 
 ## Demonstração da Interface
-![Interface do SO rodando no Bochs](interface.jpg)
+![Interface do SO rodando no Bochs](interface.jpeg)
 
 ## Como Executar:
 O projeto utiliza `Make` para automatizar a compilação e execução.
