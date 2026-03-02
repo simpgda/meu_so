@@ -2,14 +2,17 @@
 
 Projeto de desenvolvimento de um Kernel simples (x86), implementando bootloader, GDT, IDT e tratamento de interrupções básicas.
 
-## Alunos
+## Quem fez o que: 
 
 - Gabriel de Albuquerque Simplício
 - João Pedro Lima Dantas
 - João Henrique Alves de Sousa
 - Lucas Franca de Melo Batista
 
-## Como Executar
+## Demonstração da Interface
+![Interface do SO rodando no Bochs](interface.jpg)
+
+## Como Executar:
 O projeto utiliza `Make` para automatizar a compilação e execução.
 
 Deve ter instalado: `build-essential` / `nasm` / `genisoimage` / `bochs` e `bochs-x`
