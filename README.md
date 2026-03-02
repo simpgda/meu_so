@@ -13,6 +13,7 @@ Projeto de desenvolvimento de um Kernel simples (x86), implementando bootloader,
 ![Interface do SO rodando no Bochs](interface.jpeg)
 
 ## Como Executar:
+O projeto foi feito no ambiente WSL (Ubuntu).
 O projeto utiliza `Make` para automatizar a compilação e execução.
 
 Deve ter instalado: `build-essential` / `nasm` / `genisoimage` / `bochs` e `bochs-x`
