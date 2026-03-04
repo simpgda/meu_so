@@ -15,7 +15,9 @@ struct gdt_entry {
     unsigned char  base_high;
 } __attribute__((packed));
 
-void init_gdt(void);
+void gdt_init(void);
+void gdt_set_gate(int num, unsigned int base, unsigned int limit, unsigned char access, unsigned char gran);
+
 extern void load_gdt(unsigned int gdt_ptr);
 
 #endif /* INCLUDE_GDT_H */
