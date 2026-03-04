@@ -3,9 +3,10 @@
 # ======================================================================
 # Lista de todos os arquivos objeto (.o) que compõem o nosso Sistema Operacional.
 # Se criar um arquivo novo (ex: keyboard.c), basta adicionar keyboard.o aqui!
-OBJECTS = loader.o kmain.o \
-          io/io.o io/io_func.o \
-          gdt/gdt.o gdt/gdt_asm.o \
+OBJECTS = loader.o kernel/kmain.o \
+          io/io.o \
+          drivers/fb.o drivers/serial.o \
+          gdt/gdt.o gdt/gdt_s.o \
           idt/idt.o \
           interrupts/interrupts.o interrupts/interrupts_asm.o
 
@@ -18,7 +19,7 @@ CC = gcc
 # -I: Ensina o GCC onde procurar os arquivos de cabeçalho (.h) nas pastas.
 CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
          -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c \
-         -I. -Iio -Igdt -Iidt -Iinterrupts
+         -I. -Iio -Igdt -Iidt -Iinterrupts -Idrivers
 
 # Linker (LD) e suas flags
 # -T link.ld: Usa o nosso script customizado para organizar a memória.
@@ -82,7 +83,7 @@ run: os.iso
 # Apaga todos os arquivos gerados para forçar uma recompilação limpa
 clean:
 	rm -rf *.o kernel.elf os.iso
-	rm -rf io/*.o gdt/*.o idt/*.o interrupts/*.o
+	rm -rf io/*.o gdt/*.o idt/*.o interrupts/*.o drivers/*.o
 
 # Avisa ao Make que essas palavras não são arquivos reais que ele deve procurar
 .PHONY: all run clean
