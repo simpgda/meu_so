@@ -24,23 +24,23 @@ interrupt_handler_%1:
 %endmacro
 
 common_interrupt_handler:
-    ; save the registers
+    ; Salva todos os registradores de uso geral na pilha.
+    ; A ordem aqui define a struct cpu_state no C (inversa: edi é o topo).
+    ; NÃO salvamos ESP: fazer push/pop de ESP corrompe a pilha.
     push eax
     push ebx
     push ecx
     push edx
     push ebp
-    push esp
     push esi
     push edi
 
-    ; call the C function
+    ; Chama o handler em C (interrupts.c)
     call interrupt_handler
 
-    ; restore the registers
+    ; Restaura os registradores na ordem inversa
     pop edi
     pop esi
-    pop esp
     pop ebp
     pop edx
     pop ecx

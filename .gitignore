@@ -5,6 +5,7 @@
 *.elf
 *.iso
 iso/boot/kernel.elf
+iso/modules/program
 
 # ==========================================
 # Logs e Arquivos do Emulador (Bochs / Serial)

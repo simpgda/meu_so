@@ -3,12 +3,13 @@
 # ======================================================================
 # Lista de todos os arquivos objeto (.o) que compõem o nosso Sistema Operacional.
 # Se criar um arquivo novo (ex: keyboard.c), basta adicionar keyboard.o aqui!
-OBJECTS = loader.o kernel/kmain.o \
+OBJECTS = loader.o kernel/kmain.o kernel/klog.o \
           io/io.o \
           drivers/fb.o drivers/serial.o \
           gdt/gdt.o gdt/gdt_s.o \
           idt/idt.o \
-          interrupts/interrupts.o interrupts/interrupts_asm.o
+          interrupts/interrupts.o interrupts/interrupts_asm.o \
+          interrupts/pic.o
 
 # Compilador C (GCC) e suas flags
 CC = gcc
@@ -19,7 +20,7 @@ CC = gcc
 # -I: Ensina o GCC onde procurar os arquivos de cabeçalho (.h) nas pastas.
 CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
          -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c \
-         -I. -Iio -Igdt -Iidt -Iinterrupts -Idrivers
+         -I. -Iio -Igdt -Iidt -Iinterrupts -Idrivers -Ikernel
 
 # Linker (LD) e suas flags
 # -T link.ld: Usa o nosso script customizado para organizar a memória.
@@ -47,7 +48,8 @@ kernel.elf: $(OBJECTS)
 # Ele depende do kernel.elf estar pronto. 
 # Copia o kernel pra pasta iso/boot e usa o genisoimage para empacotar tudo 
 # usando o GRUB (stage2_eltorito) para tornar o CD bootável.
-os.iso: kernel.elf
+# O ISO agora também depende do programa externo (módulo GRUB do Cap. 7)
+os.iso: kernel.elf iso/modules/program
 	cp kernel.elf iso/boot/kernel.elf
 	genisoimage -R \
 	-b boot/grub/stage2_eltorito \
@@ -84,6 +86,13 @@ run: os.iso
 clean:
 	rm -rf *.o kernel.elf os.iso
 	rm -rf io/*.o gdt/*.o idt/*.o interrupts/*.o drivers/*.o
+	rm -rf iso/modules/program
+
+# Compila o programa externo como binário flat (sem ELF) usando 'nasm -f bin' (Cap. 7)
+# O resultado vai direto para iso/modules/ para ser empacotado no ISO
+iso/modules/program: userprog/program.asm
+	mkdir -p iso/modules
+	$(AS) -f bin $< -o $@
 
 # Avisa ao Make que essas palavras não são arquivos reais que ele deve procurar
 .PHONY: all run clean

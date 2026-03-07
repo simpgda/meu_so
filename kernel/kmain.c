@@ -1,58 +1,91 @@
+/*
+ * kmain.c - Função Principal do Kernel (Capítulos 3-7)
+ *
+ * Este é o "main" do nosso Sistema Operacional. O GRUB carrega o kernel,
+ * o loader.s configura a pilha e passa o controle para cá.
+ *
+ * Fluxo de execução:
+ *   1. Configura GDT (segmentação) e IDT (interrupções)
+ *   2. Remapeia o PIC para evitar conflito com exceções da CPU
+ *   3. Habilita interrupções (sti)
+ *   4. Inicializa os drivers de saída (tela + serial)
+ *   5. Valida e executa o módulo externo carregado pelo GRUB (Cap. 7)
+ *   6. Entra em loop infinito aguardando interrupções de hardware
+ */
+
 #include "gdt.h"
 #include "idt.h"
-#include "fb.h"
-#include "serial.h"
-#include "io.h"
+#include "klog.h"
+#include "multiboot.h"
+#include "pic.h"
 
 /*
- * pic_remap:
- * O processador x86 reserva as interrupções 0-31 para erros internos (ex: divisão por zero).
- * O hardware (PIC) vem de fábrica usando esses mesmos números, o que causa conflito.
- * Esta função empurra as interrupções de hardware para frente (começando no 32)
- * e aplica uma máscara para escutar APENAS o teclado.
+ * kmain:
+ * Ponto de entrada principal do kernel, chamado pelo loader.s.
+ *
+ * @param multiboot_info_addr  Endereço da struct multiboot_info preenchida pelo GRUB.
+ *                             O GRUB coloca esse ponteiro no registrador EBX,
+ *                             e o loader.s empurra na pilha antes de chamar kmain.
  */
-void pic_remap(void) {
-    /* Reinicia os controladores Master e Slave */
-    outb(0x20, 0x11); outb(0xA0, 0x11);
-    
-    /* Define o novo ponto de partida: Master no 32 (0x20) e Slave no 40 (0x28) */
-    outb(0x21, 0x20); outb(0xA1, 0x28); 
-    
-    /* Configura a cascata de comunicação entre os dois chips */
-    outb(0x21, 0x04); outb(0xA1, 0x02);
-    outb(0x21, 0x01); outb(0xA1, 0x01);
-    
-    /* Máscara: 0xFD (11111101) libera só o bit 1 (Teclado). 0xFF silencia o Slave inteiro. */
-    outb(0x21, 0xFD); 
-    outb(0xA1, 0xFF);
-}
-
-int kmain(void)
+int kmain(unsigned int multiboot_info_addr)
 {
-    /* Prepara as estruturas de memória e interrupções da CPU */
+    /* === FASE 1: Inicialização do Hardware da CPU === */
+
+    /* Carrega a GDT (Global Descriptor Table) - define os segmentos de memória (Cap. 5) */
     init_gdt();
+
+    /* Carrega a IDT (Interrupt Descriptor Table) - registra os handlers de interrupção (Cap. 6) */
     init_idt();
     
-    /* Organiza os hardwares externos para não travarem a CPU */
+    /* Remapeia o PIC: move IRQs do hardware para interrupções 32-47 (Cap. 6) */
     pic_remap();
     
-    /* Habilita a CPU para começar a responder a eventos externos (como digitar) */
+    /* STI (Set Interrupt Flag): a partir daqui a CPU aceita interrupções externas */
     __asm__("sti");
     
-    /* Prepara os dispositivos de saída (Arquivo de Log e Tela do Emulador) */
-    serial_init();
-    fb_clear();
+    /* === FASE 2: Inicialização dos Drivers de Saída === */
 
-    /* Envia uma mensagem oculta para a porta serial (verificável no com1.out) */
-    char log_boot[] = "Log: Sistema Operacional Iniciado com Sucesso!\n";
-    serial_write(0x3F8, log_boot, 47);
+    /* Configura a serial COM1 e limpa a tela do framebuffer (Cap. 4) */
+    klog_init();
 
-    /* Renderiza a interface inicial para o usuário no Framebuffer */
-    fb_write("Sistema Operacional Carregado!\n", 31);
-    fb_write("[OK] Hardware configurado.\n", 27);
-    fb_write("Pode digitar agora...\n> ", 24);  
+    /* Mensagens de boot - aparecem na tela do Bochs E no arquivo com1.out */
+    klog_write("Log: Sistema Operacional Iniciado com Sucesso!\n");
+    klog_write("Sistema Operacional Carregado!\n");
+    klog_write("[OK] Hardware configurado.\n");
 
-    /* O SO adormece aguardando a próxima interrupção de hardware para economizar CPU */
+    /* === FASE 3: Carregamento e Execução do Módulo Externo (Cap. 7) === */
+
+    /* Converte o endereço passado pelo GRUB (via EBX) para a struct multiboot_info */
+    struct multiboot_info *mbi = (struct multiboot_info *)multiboot_info_addr;
+
+    /* Verifica se o GRUB realmente carregou exatamente 1 módulo */
+    if (!(mbi->flags & MULTIBOOT_INFO_MODS) || mbi->mods_count != 1) {
+        klog_write("Erro: modulo GRUB ausente.\n");
+        while (1) {
+            __asm__("hlt");
+        }
+    }
+
+    /* Pega o endereço de memória onde o GRUB colocou o binário do módulo */
+    struct multiboot_module *mod = (struct multiboot_module *)mbi->mods_addr;
+    klog_write("Executando modulo externo...\n");
+
+    /*
+     * Cria um ponteiro de função apontando para o início do módulo na memória.
+     * Quando chamamos start_program(), a CPU pula para o código do programa externo.
+     * Se o programa fizer 'ret', o controle volta para cá.
+     */
+    typedef void (*call_module_t)(void);
+    call_module_t start_program = (call_module_t)mod->mod_start;
+    start_program();
+
+    /* Só chega aqui se o módulo executar 'ret' (retornar ao kernel) */
+    klog_write("Modulo retornou ao kernel.\n");
+    klog_write("Pode digitar agora...\n> ");
+
+    /* === FASE 4: Loop Principal === */
+
+    /* O kernel adormece e só acorda quando uma interrupção chega (ex: tecla pressionada) */
     while(1) {
         __asm__("hlt");
     }

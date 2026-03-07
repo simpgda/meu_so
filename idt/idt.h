@@ -14,15 +14,20 @@ struct idt_ptr {
     unsigned int   base;
 } __attribute__((packed));
 
+/*
+ * cpu_state:
+ * Representa os registradores salvos pelo handler de interrupção.
+ * A ORDEM IMPORTA: precisa ser a inversa dos pushes no Assembly.
+ * O último push (edi) vira o primeiro campo, porque a pilha cresce para baixo.
+ */
 struct cpu_state {
-    unsigned int eax;
-    unsigned int ebx;
-    unsigned int ecx;
-    unsigned int edx;
-    unsigned int ebp;
-    unsigned int esp;
     unsigned int edi;
     unsigned int esi;
+    unsigned int ebp;
+    unsigned int edx;
+    unsigned int ecx;
+    unsigned int ebx;
+    unsigned int eax;
 } __attribute__((packed));
 
 struct stack_state {
@@ -34,8 +39,5 @@ struct stack_state {
 
 void init_idt(void);
 extern void load_idt(unsigned int idt_ptr);
-
-void pic_acknowledge(unsigned int interrupt);
-unsigned char read_scan_code(void);
 
 #endif /* INCLUDE_IDT_H */
