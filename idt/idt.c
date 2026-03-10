@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "../io/io.h" // Adicionamos isso para o inb e outb funcionarem
 
 struct idt_entry idt_entries[256];
 struct idt_ptr   idt_pointer;
@@ -24,3 +25,5 @@ void init_idt(void)
 
     load_idt((unsigned int)&idt_pointer);
 }
+
+

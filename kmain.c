@@ -2,6 +2,16 @@
 #include "gdt.h"
 #include "idt.h"
 
+/* Protótipos das funções (Avisa o compilador que elas existem mais abaixo) */
+void fb_move_cursor(unsigned short pos);
+void fb_write_cell(unsigned int i, char c, unsigned char fg, unsigned char bg);
+
+/* Variável global para o cursor (sem o static) */
+unsigned int cursor_pos = 0;
+
+/* --- DECLARAÇÃO DO PIC (Para o teclado funcionar) --- */
+void pic_remap(void);
+
 /* --- CONFIGURAÇÃO DO FRAMEBUFFER (Tela VGA) --- */
 /* Portas de I/O usadas para enviar comandos para a placa de vídeo (VGA) */
 #define FB_COMMAND_PORT         0x3D4
@@ -19,9 +29,25 @@ char *fb = (char *) 0x000B8000;
 void fb_write_cell(unsigned int i, char c, unsigned char fg, unsigned char bg)
 {
     fb[i] = c;
-    /* O byte de cor no VGA mistura o background (bg) nos 4 bits mais altos 
-       e o foreground (fg) nos 4 bits mais baixos. */
-    fb[i + 1] = ((fg & 0x0F) << 4) | (bg & 0x0F);
+    // Forçamos a montagem do byte: fundo nos 4 bits altos, letra nos 4 baixos
+    fb[i + 1] = ((bg & 0x0F) << 4) | (fg & 0x0F);
+}
+
+void fb_write(char *buf, unsigned int len) {
+    unsigned int i;
+    unsigned short *video_memory = (unsigned short *)0xB8000;
+    
+    for (i = 0; i < len; i++) {
+        if (buf[i] == '\n') {
+            cursor_pos = cursor_pos + 80 - (cursor_pos % 80);
+        } else {
+            /* 0x70 = Fundo Cinza, Letra Preta */
+            video_memory[cursor_pos] = (0x70 << 8) | buf[i];
+            cursor_pos++;
+        }
+        if (cursor_pos >= 2000) cursor_pos = 0;
+    }
+    fb_move_cursor(cursor_pos);
 }
 
 void fb_move_cursor(unsigned short pos)
@@ -96,17 +122,34 @@ void serial_write(char *buf, unsigned int len) {
     }
 }
 
+// Função para limpar a tela 
+void limpar_tela() {
+    for (int i = 0; i < 2000; i++) {
+        /* i*2 se for acesso direto ao buffer, ou i se usar fb_write_cell */
+        fb_write_cell(i * 2, ' ', 0, 7); 
+    }
+    fb_move_cursor(0);
+}
+
 /* --- KERNEL MAIN --- */
 int kmain(void)
 {
     /* Configura o Flat Memory Model e os anéis de segurança (Ring 0 / Kernel mode) */
     init_gdt();
+    
     /* Carrega a tabela de interrupções para a CPU saber o que fazer quando o hardware chamar */
     init_idt();
 
-    /* Desenha um 'A' verde na primeira posição da memória de vídeo para provar que o SO iniciou */
-    fb_write_cell(0, 'A', FB_GREEN, FB_DARK_GREY);
-    fb_move_cursor(1);
+    /* --- LIMPA A TELA ANTES DE LIGAR O TECLADO --- */
+    limpar_tela();
+
+    /* Mensagem de Log de sistema */
+    char msg[] = "SISTEMA OPERACIONAL GABRIEL - KERNEL BOOTED SUCCESSFULLY\n";
+    fb_write(msg, sizeof(msg) - 1);
+
+    /* --- NOSSAS DUAS LINHAS DE OURO AQUI --- */
+    pic_remap();         // Avisa o PIC para enviar o teclado para a interrupção 33
+    __asm__ __volatile__("sti"); // Liga a chave geral das interrupções no processador
 
     /* Inicializa a porta serial para podermos enviar logs silenciosos que não sujam a tela do SO */
     serial_configure_baud_rate(SERIAL_COM1_BASE, 1);
@@ -116,6 +159,11 @@ int kmain(void)
 
     char log_msg[] = "Hello Serial World!";
     serial_write(log_msg, sizeof(log_msg));
+
+    /* Loop infinito para segurar o sistema ligado esperando as teclas */
+    while(1) {
+        // Fica aqui escutando para sempre...
+    }
 
     return 0xCAFEBABE;
 }

@@ -1,4 +1,4 @@
-OBJECTS = loader.o kmain.o \
+OBJECTS = loader.o kmain.o io/pic.o \
           io/io.o io/io_func.o \
           gdt/gdt.o gdt/gdt_asm.o \
           idt/idt.o \
@@ -25,15 +25,15 @@ kernel.elf: $(OBJECTS)
 os.iso: kernel.elf
 	cp kernel.elf iso/boot/kernel.elf
 	genisoimage -R \
-        -b boot/grub/stage2_eltorito \
-        -no-emul-boot \
-        -boot-load-size 4 \
-        -A os \
-        -input-charset utf8 \
-        -quiet \
-        -boot-info-table \
-        -o os.iso \
-        iso
+	-b boot/grub/stage2_eltorito \
+	-no-emul-boot \
+	-boot-load-size 4 \
+	-A os \
+	-input-charset utf8 \
+	-quiet \
+	-boot-info-table \
+	-o os.iso \
+	iso
 
 run: os.iso
 	bochs -f bochsrc.txt -q
