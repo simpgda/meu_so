@@ -11,7 +11,7 @@ display_library: x
 
 # Aponta para os arquivos de BIOS do emulador. 
 # O PC virtual precisa disso para ligar a placa-mãe virtual e a placa de vídeo VGA.
-romimage:        file=/usr/share/bochs/BIOS-bochs-latest
+romimage:        file=/usr/share/bochs/BIOS-bochs-legacy
 vgaromimage:     file=/usr/share/bochs/VGABIOS-lgpl-latest
 
 # ======================================================================
