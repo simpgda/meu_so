@@ -1,5 +1,11 @@
+# Configuração do GRUB Legacy para o nosso SO
+# default=0  -> Seleciona automaticamente a primeira entrada
+# timeout=0  -> Não espera o usuário escolher (boot instantâneo)
 default=0
 timeout=0
 
 title os
 kernel /boot/kernel.elf
+# Carrega o programa externo como módulo na memória (Cap. 7)
+# O kernel encontra o endereço dele via struct multiboot_info
+module /modules/program

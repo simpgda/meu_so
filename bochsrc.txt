@@ -1,10 +1,65 @@
+# ======================================================================
+# CONFIGURAÇÃO DE HARDWARE BÁSICO
+# ======================================================================
+# Define a quantidade de memória RAM da máquina virtual (32 Megabytes).
 megs:            32
+
+# Define como o emulador vai exibir a tela.
+# 'x' usa o servidor gráfico do Linux (X11) para abrir uma janela separada.
+# 'gui_debug' abre o painel avançado de debug ao lado da tela do SO.
 display_library: x
-romimage:        file=/usr/share/bochs/BIOS-bochs-legacy
+
+# Aponta para os arquivos de BIOS do emulador. 
+# O PC virtual precisa disso para ligar a placa-mãe virtual e a placa de vídeo VGA.
+romimage:        file=/usr/share/bochs/BIOS-bochs-latest
 vgaromimage:     file=/usr/share/bochs/VGABIOS-lgpl-latest
+
+# ======================================================================
+# CONFIGURAÇÃO DE DISCO E BOOT
+# ======================================================================
+# Cria um drive de CD-ROM virtual (ata0-master), insere o arquivo 'os.iso' 
+# nele e avisa que o disco já está inserido no drive.
 ata0-master:     type=cdrom, path=os.iso, status=inserted
+
+# Define a ordem de boot. Força a máquina a dar boot pelo CD-ROM virtual.
 boot:            cdrom
-log:             bochslog.txt
-clock:           sync=none, time0=local
-cpu:             count=1, ips=1000000
+
+# ======================================================================
+# DEBUG E LOGS (ESSENCIAL PARA O DESENVOLVEDOR)
+# ======================================================================
+# Habilita o "Magic Breakpoint". Se colocarmos a instrução assembly 'xchg bx, bx'
+# no código, o emulador pausa a execução na hora, permitindo inspecionar a memória.
+magic_break: enabled=1
+
+# Salva todo o histórico de execução da máquina virtual neste arquivo de texto.
+log: bochslog.txt
+
+# Como o emulador reage a diferentes eventos:
+# panic (ex: Triple Fault) -> Pergunta ao usuário o que fazer ('ask').
+# error / info -> Apenas reporta no log ('report').
+# debug -> Ignora mensagens chatas de debug do próprio emulador ('ignore').
+panic: action=ask
+error: action=report
+info: action=report
+debug: action=ignore
+
+# ======================================================================
+# PORTA SERIAL (CAPÍTULO 4)
+# ======================================================================
+# Ativa a porta COM1 e redireciona tudo o que o seu SO enviar para ela 
+# direto para um arquivo chamado 'com1.out' no seu Linux real.
 com1: enabled=1, mode=file, dev=com1.out
+
+# (Aviso: A linha de log abaixo está duplicada no seu código original, 
+# você pode apagar esta linha se quiser, pois já definimos lá em cima).
+# log:             bochslog.txt
+
+# ======================================================================
+# PROCESSADOR E TEMPO
+# ======================================================================
+# sync=none faz o emulador rodar o mais rápido possível (boot instantâneo).
+clock:           sync=none, time0=local
+
+# Aumentamos o IPS (Instructions Per Second) para 50 milhões. 
+# O SO vai responder muito mais rápido à digitação.
+cpu:             count=1, ips=50000000
