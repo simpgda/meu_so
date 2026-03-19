@@ -7,8 +7,8 @@
 #define FB_HIGH_BYTE    14
 #define FB_LOW_BYTE     15
 
-/* O Framebuffer mapeia a tela diretamente na memória RAM neste endereço físico */
-static char *fb = (char *) 0x000B8000;
+/* O Framebuffer usa o endereço virtual mapeado na metade superior (Higher Half) */
+static char *fb = (char *) 0xC00B8000;
 
 /* Dimensões da tela em modo texto VGA */
 #define FB_COLS 80
