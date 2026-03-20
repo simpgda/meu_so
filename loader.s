@@ -16,6 +16,7 @@ PAGE_FLAGS    equ 0x00000083
 ; SEÇÃO BSS (Variáveis não inicializadas)
 ; ==========================================
 section .bss
+global page_directory           ; O C vai precisar acessar isso
 align 4096                      ; OBRIGATÓRIO: O Diretório de Páginas precisa estar alinhado em 4KB
 page_directory:                 ; Array provisório de 1024 gavetas
     resb 4096
@@ -36,6 +37,10 @@ align 4
     dd CHECKSUM                 
     
 extern kmain                    
+extern kernel_virtual_start
+extern kernel_virtual_end
+extern kernel_physical_start
+extern kernel_physical_end
 
 ; ==========================================
 ; FUNÇÃO LOADER (Ponto de Entrada)
@@ -97,7 +102,11 @@ higher_half:
     ; Adicionamos 0xC0000000 para que o kernel possa acessá-la no espaço virtual.
     add ebx, 0xC0000000
     
-    ; Empurramos na pilha para virar argumento da função kmain(ebx).
+    ; Empurramos na pilha para virar argumento da função kmain(...)
+    push kernel_physical_end
+    push kernel_physical_start
+    push kernel_virtual_end
+    push kernel_virtual_start
     push ebx                    ; multiboot_info_addr (primeiro argumento do kmain)
     call kmain                  ; Chama a função principal do SO. O retorno (se houver) ficará no registrador EAX.                  
 

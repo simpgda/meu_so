@@ -13,6 +13,8 @@
 
 /* Bit 3 do campo 'flags': indica que informações sobre módulos estão disponíveis */
 #define MULTIBOOT_INFO_MODS 0x00000008
+/* Bit 6 do campo 'flags': indica que informações de mapa de memória estão disponíveis */
+#define MULTIBOOT_INFO_MMAP 0x00000040
 
 /*
  * multiboot_info:
@@ -27,6 +29,22 @@ struct multiboot_info {
     unsigned int cmdline;      /* Endereço da string de linha de comando do kernel      */
     unsigned int mods_count;   /* Quantos módulos o GRUB carregou                      */
     unsigned int mods_addr;    /* Endereço do array de structs multiboot_module         */
+    unsigned int syms[4];      /* Informações sobre símbolos                           */
+    unsigned int mmap_length;  /* Tamanho total do mapa de memória (em bytes)          */
+    unsigned int mmap_addr;    /* Endereço físico do primeiro item do mmap             */
+} __attribute__((packed));
+
+/*
+ * multiboot_mmap_entry:
+ * Descreve uma região de memória no mapa fornecido pelo GRUB.
+ */
+struct multiboot_mmap_entry {
+    unsigned int size;         /* Tamanho da struct sem este campo (normalmente 20)    */
+    unsigned int addr_low;     /* Endereço inicial (baixa 32-bit)                      */
+    unsigned int addr_high;    /* Endereço inicial (alta 32-bit)                       */
+    unsigned int len_low;      /* Tamanho da região (baixa 32-bit)                     */
+    unsigned int len_high;     /* Tamanho da região (alta 32-bit)                      */
+    unsigned int type;         /* Tipo: 1 = RAM disponível, Outros = Reservado         */
 } __attribute__((packed));
 
 /*

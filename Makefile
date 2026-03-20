@@ -8,13 +8,14 @@ OBJECTS = loader.o kernel/kmain.o kernel/klog.o \
           gdt/gdt.o gdt/gdt_s.o \
           idt/idt.o \
           interrupts/interrupts.o interrupts/interrupts_asm.o \
-          interrupts/pic.o
+          interrupts/pic.o \
+          mm/pmm.o mm/vmm.o mm/kheap.o
 
 # Compilador C (GCC) e suas flags
 CC = gcc
 CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
          -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c \
-         -I. -Iio -Igdt -Iidt -Iinterrupts -Idrivers -Ikernel
+         -I. -Iio -Igdt -Iidt -Iinterrupts -Idrivers -Ikernel -Imm
 
 # Linker (LD) e suas flags
 LDFLAGS = -T link.ld -melf_i386
@@ -67,7 +68,7 @@ run: os.iso
 # Apaga todos os arquivos gerados para forçar uma recompilação limpa
 clean:
 	rm -rf *.o kernel.elf os.iso
-	rm -rf io/*.o gdt/*.o idt/*.o interrupts/*.o drivers/*.o kernel/*.o
+	rm -rf io/*.o gdt/*.o idt/*.o interrupts/*.o drivers/*.o kernel/*.o mm/*.o
 	rm -rf iso/modules/program
 
 # Compila o programa externo como binário flat

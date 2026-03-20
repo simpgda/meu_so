@@ -18,15 +18,25 @@
 #include "klog.h"
 #include "multiboot.h"
 #include "pic.h"
+#include "../mm/pmm.h"
+#include "../mm/vmm.h"
+#include "../mm/kheap.h"
 
 /*
  * kmain:
  * Ponto de entrada principal do kernel, chamado pelo loader.s.
  *
  * @param multiboot_info_addr  Endereço da struct multiboot_info.
- * O loader.s já somou 0xC0000000 no EBX para nós.
+ * @param kernel_virtual_start Endereço virtual do início do kernel.
+ * @param kernel_virtual_end   Endereço virtual do fim do kernel.
+ * @param kernel_physical_start Endereço físico do início do kernel.
+ * @param kernel_physical_end   Endereço físico do fim do kernel.
  */
-int kmain(unsigned int multiboot_info_addr)
+int kmain(unsigned int multiboot_info_addr, 
+          unsigned int kernel_virtual_start,
+          unsigned int kernel_virtual_end,
+          unsigned int kernel_physical_start,
+          unsigned int kernel_physical_end)
 {
     /* === FASE 1: Inicialização do Hardware da CPU === */
 
@@ -50,14 +60,38 @@ int kmain(unsigned int multiboot_info_addr)
     /* Mensagens de boot - aparecem na tela do Bochs E no arquivo com1.out */
     klog_write("Log: Sistema Operacional Iniciado com Sucesso!\n");
     klog_write("Sistema Operacional Carregado!\n");
+    
+    // Evita erro de "unused parameter" e loga informações úteis
+    (void)kernel_virtual_start;
+    (void)kernel_virtual_end;
+
     klog_write("[OK] Hardware configurado.\n");
     klog_write("[OK] Paginacao ativada pelo loader.s!\n");
     klog_write("[OK] Kernel operando em 0xC0100000 (Higher Half).\n");
 
-    /* === FASE 3: Carregamento e Execução do Módulo Externo (Cap. 7) === */
+    /* === FASE 3: Gerenciamento de Memória (Cap. 10) === */
 
     /* Converte o endereço passado pelo GRUB para a struct multiboot_info */
     struct multiboot_info *mbi = (struct multiboot_info *)multiboot_info_addr;
+
+    /* Inicializa o Alocador de Quadros Físicos (PMM) */
+    pmm_init(mbi, kernel_physical_start, kernel_physical_end);
+
+    /* Inicializa o Gerenciador de Memória Virtual (VMM) */
+    vmm_init();
+
+    /* Inicializa o Heap do Kernel (malloc/free) */
+    kheap_init();
+
+    /* Teste simples do Heap */
+    void *ptr1 = kmalloc(100);
+    if (ptr1) {
+        klog_write("[OK] kmalloc(100) funcionou!\n");
+        kfree(ptr1);
+        klog_write("[OK] kfree() funcionou!\n");
+    }
+
+    /* === FASE 4: Carregamento e Execução do Módulo Externo (Cap. 7) === */
 
     /* Verifica se o GRUB realmente carregou exatamente 1 módulo */
     if (!(mbi->flags & MULTIBOOT_INFO_MODS) || mbi->mods_count != 1) {
