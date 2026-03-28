@@ -1,7 +1,5 @@
 # 💻 Sistemas Operacionais - Kernel Simples (x86)
 
-![Language](https://img.shields.io/badge/language-C-blue.svg) ![Language](https://img.shields.io/badge/language-Assembly-red.svg) ![Platform](https://img.shields.io/badge/platform-i686--elf-lightgrey.svg)
-
 Este projeto consiste no desenvolvimento de um kernel monolítico simples para a arquitetura x86, abordando conceitos fundamentais de sistemas operacionais como bootloader, segmentação, gerenciamento de interrupções, memória e execução de programas externos.
 
 ---
@@ -93,7 +91,8 @@ Para debugar o kernel usando as ferramentas integradas do Bochs:
 2. O Bochs iniciará pausado. No terminal, você pode usar comandos como:
    - `c`: Continua a execução.
    - `s`: Executa a próxima instrução (step).
-   - `info cpu`: Mostra o estado dos registradores.
+   - `r`: Mostra o estado dos registradores (EAX, EBX, ESP, etc).
+   - `info cpu`: Mostra informações detalhadas da CPU.            
    - `xp /n addr`: Examina o conteúdo da memória física.
 
 ---
