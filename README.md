@@ -51,7 +51,7 @@ make run
 - **Kernel Heap (CAP 10):** Implementação de alocador de memória dinâmica para o kernel (`kmalloc` e `kfree`), permitindo estruturas de dados flexíveis.
 - **User Mode Foundation (CAP 08):** Estrutura inicial para suporte a Ring 3 e isolamento de processos.
 
-### ✅ Entrega Parcial (06/04) - Multitarefa & Sincronização (CAP 14 e Tarefa 05)
+### ✅ Entrega Final (06/04) - Multitarefa & Sincronização (CAP 14 e Tarefa 05)
 - **Escalonador Cooperativo (CAP 14):** Implementação de troca de contexto (*context switch*) salvando o estado dos registradores na pilha de cada thread.
 - **Primitiva `yield`:** Implementação da função `task_yield()` para alternância voluntária entre tarefas.
 - **Sincronização (Mutex):** Criação de primitivas de exclusão mútua (`lock` e `unlock`) para proteger recursos compartilhados.
