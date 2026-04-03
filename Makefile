@@ -2,14 +2,15 @@
 # 1. VARIÁVEIS E CONFIGURAÇÕES
 # ======================================================================
 # Lista de todos os arquivos objeto (.o) que compõem o nosso Sistema Operacional.
-OBJECTS = loader.o kernel/kmain.o kernel/klog.o \
+OBJECTS = loader.o kernel/kmain.o kernel/klog.o kernel/task.o kernel/sync.o \
           io/io.o \
           drivers/fb.o drivers/serial.o \
           gdt/gdt.o gdt/gdt_s.o \
           idt/idt.o \
           interrupts/interrupts.o interrupts/interrupts_asm.o \
           interrupts/pic.o \
-          mm/pmm.o mm/vmm.o mm/kheap.o
+          mm/pmm.o mm/vmm.o mm/kheap.o \
+		  
 
 # Compilador C (GCC) e suas flags
 CC = gcc

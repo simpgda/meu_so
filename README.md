@@ -51,6 +51,12 @@ make run
 - **Kernel Heap (CAP 10):** Implementação de alocador de memória dinâmica para o kernel (`kmalloc` e `kfree`), permitindo estruturas de dados flexíveis.
 - **User Mode Foundation (CAP 08):** Estrutura inicial para suporte a Ring 3 e isolamento de processos.
 
+### ✅ Entrega Parcial (06/04) - Multitarefa & Sincronização (CAP 14 e Tarefa 05)
+- **Escalonador Cooperativo (CAP 14):** Implementação de troca de contexto (*context switch*) salvando o estado dos registradores na pilha de cada thread.
+- **Primitiva `yield`:** Implementação da função `task_yield()` para alternância voluntária entre tarefas.
+- **Sincronização (Mutex):** Criação de primitivas de exclusão mútua (`lock` e `unlock`) para proteger recursos compartilhados.
+- **Desafio de Deadlock:** Simulação de um impasse (*deadlock*) entre dois clientes disputando arquivos e demonstração da solução via **Hierarquia de Travas**.
+
 ---
 
 ## 📂 Estrutura do Projeto
@@ -81,6 +87,9 @@ O kernel é carregado fisicamente em `0x100000` (1MB), mas mapeado virtualmente 
 - **VMM:** Implementa paginação de dois níveis (*Page Directory* e *Page Tables*).
 - **Heap:** Alocador simples para memória dinâmica dentro do kernel.
 
+### Multitarefa Cooperativa (Cap 14)
+O escalonador opera salvando o contexto da CPU (`EIP`, `ESP`, registradores de propósito geral) na stack da thread atual e carregando o contexto da próxima. A sincronização entre threads é feita via **Mutexes**, que utilizam o `task_yield()` para evitar o desperdício de ciclos de CPU enquanto aguardam um recurso.
+
 ---
 
 ## 🐞 Depuração (Debugging)
@@ -102,3 +111,12 @@ Para debugar o kernel usando as ferramentas integradas do Bochs:
 - **GCC (i686-elf):** Compilador C para o kernel.
 - **Bochs:** Emulador x86 com debugger integrado.
 - **Makefile:** Orquestração de build.
+
+---
+
+## 🧪 Demonstração da Tarefa 05 (Chat & Deadlock)
+
+O kernel inicia duas threads simulando **Clientes de Terminal**. Para alternar os cenários de teste, altere a variável `modo_seguro` no arquivo `kernel/kmain.c`:
+
+1. **Modo Deadlock (`modo_seguro = 0`):** Demonstra o travamento do sistema quando os clientes tentam adquirir os Recursos A e B em ordens opostas (Espera Circular).
+2. **Modo Hierarquia (`modo_seguro = 1`):** Demonstra a solução do impasse através da **Hierarquia de Travas**, garantindo que o sistema flua sem interrupções.
