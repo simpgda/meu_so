@@ -2,10 +2,16 @@
 #include "../mm/kheap.h" // kmalloc para alocar a pilha
 
 #define STACK_SIZE 4096 // Tamanho da pilha para cada thread (4KB)
+#define MAX_THREADS 8
 
-    // Variáveis globais para controlar qual thread está rodando e qual é a próxima
-    thread_t *current_thread;
-    thread_t *next_thread;
+// Variáveis globais para controle da execução atual (úteis para debug)
+thread_t *current_thread;
+thread_t *next_thread;
+
+// Estruturas internas do escalonador round-robin
+static thread_t *thread_table[MAX_THREADS];
+static int thread_count = 0;
+static int current_index = -1;
 
 void create_thread(thread_t *thread, void (*entry_point)(), int id) {
     thread->id = id;
@@ -28,16 +34,44 @@ void create_thread(thread_t *thread, void (*entry_point)(), int id) {
     // 3. Salva o ESP atual na struct para quando formos pular para cá
     thread->esp = (unsigned int)stack_top;
 
+    // 4. Registra a thread no escalonador
+    if (thread_count < MAX_THREADS) {
+        thread_table[thread_count] = thread;
+        thread_count++;
+    }
+
+}
+
+void task_start(thread_t *bootstrap_thread) {
+    if (thread_count == 0) {
+        return;
+    }
+
+    current_index = 0;
+    current_thread = thread_table[current_index];
+    if (thread_count > 1) {
+        next_thread = thread_table[1];
+    } else {
+        next_thread = current_thread;
+    }
+
+    // Salva o ESP de quem chamou (ex: kmain) e entra na primeira thread
+    switch_task(&bootstrap_thread->esp, current_thread->esp);
 }
 
 void task_yield(void) {
+    if (thread_count <= 1 || current_index < 0) {
+        return;
+    }
+
     // Guarda a thread atual para depois voltar aqui
-    thread_t *prev = current_thread;
-    
-    // Decide qual é a próxima thread (aqui só alternamos entre 2 threads, mas poderia ser uma fila) (Pig-Pong)
-    current_thread = next_thread;
-    next_thread = prev;
-    
+    thread_t *prev = thread_table[current_index];
+
+    // Round-robin: avança para a próxima thread pronta
+    current_index = (current_index + 1) % thread_count;
+    current_thread = thread_table[current_index];
+    next_thread = thread_table[(current_index + 1) % thread_count];
+
     // Chama a função em Assembly para trocar o contexto (pilha) para a próxima thread
     switch_task(&prev->esp, current_thread->esp);
 }

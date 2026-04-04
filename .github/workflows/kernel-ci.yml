@@ -1,0 +1,33 @@
+name: Kernel CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make gcc gcc-multilib binutils nasm genisoimage
+
+      - name: Build kernel and ISO
+        run: |
+          make clean
+          make all
+          make os.iso
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-build-artifacts
+          path: |
+            kernel.elf
+            os.iso

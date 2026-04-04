@@ -116,7 +116,30 @@ Para debugar o kernel usando as ferramentas integradas do Bochs:
 
 ## 🧪 Demonstração da Tarefa 05 (Chat & Deadlock)
 
-O kernel inicia duas threads simulando **Clientes de Terminal**. Para alternar os cenários de teste, altere a variável `modo_seguro` no arquivo `kernel/kmain.c`:
+O kernel inicia uma thread de **Servidor de Chat** e múltiplas threads de **Clientes de Terminal**. Para alternar os cenários de teste, altere a variável `modo_seguro` no arquivo `kernel/kmain.c`:
 
 1. **Modo Deadlock (`modo_seguro = 0`):** Demonstra o travamento do sistema quando os clientes tentam adquirir os Recursos A e B em ordens opostas (Espera Circular).
 2. **Modo Hierarquia (`modo_seguro = 1`):** Demonstra a solução do impasse através da **Hierarquia de Travas**, garantindo que o sistema flua sem interrupções.
+
+---
+
+## ⭐ Bônus
+
+### CI com GitHub Actions
+Foi adicionado um workflow em `.github/workflows/kernel-ci.yml` que roda em `push`, `pull_request` e `workflow_dispatch`, executando:
+
+1. `make clean`
+2. `make all`
+3. `make os.iso`
+
+Ao final, os artefatos `kernel.elf` e `os.iso` são anexados no job.
+
+### Executar em Computador Real
+Este bônus não é automatizado por CI e exige validação manual em hardware. O caminho recomendado é:
+
+1. Gerar a imagem com `make os.iso`.
+2. Gravar a ISO em um pendrive bootável (preferencialmente em máquina de testes).
+3. Inicializar via BIOS/UEFI em modo legado compatível com GRUB.
+4. Validar o boot e capturar evidências (foto/vídeo/log serial).
+
+> Dica: Faça os testes primeiro em VM e use hardware real somente em ambiente controlado.

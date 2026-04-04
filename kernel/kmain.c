@@ -20,58 +20,154 @@
 // TAREFA 05: CHAT MULTI-USUÁRIO E DEADLOCK
 // ========================================================
 
- 
 // 0 = Sem Hierarquia de Travas (com DeadLock), 1 = Com Hierarquia de Travas (sem DeadLock)
 int modo_seguro = 1; 
 
-// Primitivas de sincronização para garantir a Exclusão Mútua no acesso aos recursos compartilhados (Buffer de Log e Arquivos simulados).
-mutex_t chat_mutex;       
+// Primitivas de sincronização para garantir Exclusão Mútua em log, fila do chat e arquivos.
+mutex_t chat_log_mutex;
+mutex_t chat_queue_mutex;
 mutex_t arquivo_A_mutex;  
 mutex_t arquivo_B_mutex;  
 
-// Nossas Threads dos Clientes e do kmain (só para salvar o estado da pilha)
+#define CHAT_MAX_MSGS 8
+#define CHAT_MSG_LEN 80
+
+typedef struct {
+    int from_id;
+    char text[CHAT_MSG_LEN];
+} chat_msg_t;
+
+chat_msg_t chat_queue[CHAT_MAX_MSGS];
+int chat_head = 0;
+int chat_tail = 0;
+int chat_count = 0;
+
+// Threads do servidor/chat e dos clientes
+thread_t thread_server;
 thread_t thread_c1;
 thread_t thread_c2;
+thread_t thread_c3;
 thread_t thread_kmain; 
 
-void delay() {
-    for(volatile int i = 0; i < 15000000; i++);
+static void delay() {
+    for (volatile unsigned int i = 0; i < 9000000; i++);
+}
+
+static void str_copy(char *dst, const char *src, unsigned int max_len) {
+    unsigned int i = 0;
+
+    if (max_len == 0) {
+        return;
+    }
+
+    while (i + 1 < max_len && src[i] != '\0') {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+}
+
+static int chat_send(int from_id, const char *text) {
+    int ok = 0;
+
+    mutex_lock(&chat_queue_mutex);
+    if (chat_count < CHAT_MAX_MSGS) {
+        chat_queue[chat_tail].from_id = from_id;
+        str_copy(chat_queue[chat_tail].text, text, CHAT_MSG_LEN);
+        chat_tail = (chat_tail + 1) % CHAT_MAX_MSGS;
+        chat_count++;
+        ok = 1;
+    }
+    mutex_unlock(&chat_queue_mutex);
+
+    return ok;
+}
+
+static int chat_receive(chat_msg_t *out_msg) {
+    int ok = 0;
+
+    mutex_lock(&chat_queue_mutex);
+    if (chat_count > 0) {
+        *out_msg = chat_queue[chat_head];
+        chat_head = (chat_head + 1) % CHAT_MAX_MSGS;
+        chat_count--;
+        ok = 1;
+    }
+    mutex_unlock(&chat_queue_mutex);
+
+    return ok;
+}
+
+static void log_server_message(const chat_msg_t *msg) {
+    mutex_lock(&chat_log_mutex);
+    if (msg->from_id == 1) {
+        klog_write("[Servidor] Cliente 1: ");
+    } else if (msg->from_id == 2) {
+        klog_write("[Servidor] Cliente 2: ");
+    } else if (msg->from_id == 3) {
+        klog_write("[Servidor] Cliente 3: ");
+    } else {
+        klog_write("[Servidor] Cliente ?: ");
+    }
+    klog_write(msg->text);
+    klog_write("\n");
+    mutex_unlock(&chat_log_mutex);
+}
+
+void servidor_chat() {
+    while (1) {
+        chat_msg_t msg;
+
+        if (chat_receive(&msg)) {
+            log_server_message(&msg);
+        } else {
+            task_yield();
+        }
+    }
 }
 
 // --- CLIENTE 1 (O Padrão) ---
 void cliente_1() {
-    while(1) {
-        // PARTE 1: O Chat
-        mutex_lock(&chat_mutex);
-        klog_write("\n[Chat] Cliente 1: Te enviei um arquivo, Cliente 2!\n");
-        mutex_unlock(&chat_mutex);
+    while (1) {
+        while (!chat_send(1, "Te enviei um arquivo, Cliente 2!")) {
+            task_yield();
+        }
         delay();
 
-        // PARTE 2: Pede A, depois B
+        mutex_lock(&chat_log_mutex);
         klog_write("[C1] Trancando Arquivo A...\n");
+        mutex_unlock(&chat_log_mutex);
         mutex_lock(&arquivo_A_mutex);
         
-        task_yield(); // Passa a vez
+        task_yield();
         
+        mutex_lock(&chat_log_mutex);
         klog_write("[C1] Tentando trancar Arquivo B...\n");
+        mutex_unlock(&chat_log_mutex);
         mutex_lock(&arquivo_B_mutex); 
         
-        // Se chegar aqui, é porque o Deadlock foi evitado!
+        mutex_lock(&chat_log_mutex);
         klog_write("[C1] Sucesso! Transferindo dados...\n");
+        mutex_unlock(&chat_log_mutex);
 
         mutex_unlock(&arquivo_B_mutex);
         mutex_unlock(&arquivo_A_mutex);
+
+        while (!chat_send(1, "Transferencia finalizada.")) {
+            task_yield();
+        }
+
+        delay();
         task_yield();
     }
 }
 
 // --- CLIENTE 2 (O da Apresentação) ---
 void cliente_2() {
-    while(1) {
-        // PARTE 1: O Chat
-        mutex_lock(&chat_mutex);
-        klog_write("\n[Chat] Cliente 2: Recebendo! Vou te mandar outro.\n");
-        mutex_unlock(&chat_mutex);
+    while (1) {
+        while (!chat_send(2, "Recebendo! Vou te mandar outro.")) {
+            task_yield();
+        }
         delay();
 
         // Simulação de Deadlock por quebra da hierarquia de recursos: indução de Espera Circular (uma das Condições de Coffman).
@@ -79,12 +175,16 @@ void cliente_2() {
             // ==========================================
             // APRESENTAÇÃO PARTE 1: FORÇANDO O DEADLOCK
             // ==========================================
+            mutex_lock(&chat_log_mutex);
             klog_write("[C2] (Sem Hierarquia) Trancando Arquivo B...\n");
+            mutex_unlock(&chat_log_mutex);
             mutex_lock(&arquivo_B_mutex); 
             
             task_yield(); 
             
+            mutex_lock(&chat_log_mutex);
             klog_write("[C2] (Sem Hierarquia) Tentando trancar Arquivo A...\n");
+            mutex_unlock(&chat_log_mutex);
             mutex_lock(&arquivo_A_mutex); // <-- VAI TRAVAR AQUI!
             
             mutex_unlock(&arquivo_A_mutex);
@@ -94,20 +194,41 @@ void cliente_2() {
             // ==========================================
             // APRESENTAÇÃO PARTE 2: A SOLUÇÃO
             // ==========================================
+            mutex_lock(&chat_log_mutex);
             klog_write("[C2] (Com Hierarquia) Trancando Arquivo A primeiro...\n");
+            mutex_unlock(&chat_log_mutex);
             mutex_lock(&arquivo_A_mutex); 
             
             task_yield(); 
             
+            mutex_lock(&chat_log_mutex);
             klog_write("[C2] (Com Hierarquia) Trancando Arquivo B...\n");
+            mutex_unlock(&chat_log_mutex);
             mutex_lock(&arquivo_B_mutex); 
             
+            mutex_lock(&chat_log_mutex);
             klog_write("[C2] Sucesso! Dados transferidos sem travar!\n");
+            mutex_unlock(&chat_log_mutex);
             
             mutex_unlock(&arquivo_B_mutex);
             mutex_unlock(&arquivo_A_mutex);
+
+            while (!chat_send(2, "Transferencia sem deadlock (hierarquia OK).")) {
+                task_yield();
+            }
         }
-        
+
+        delay();
+        task_yield();
+    }
+}
+
+void cliente_3() {
+    while (1) {
+        while (!chat_send(3, "Servidor, confirme se meu ping chegou.")) {
+            task_yield();
+        }
+        delay();
         task_yield();
     }
 }
@@ -152,22 +273,27 @@ int kmain(unsigned int multiboot_info_addr,
 
     // Inicializamos os Mutexes para controlar o acesso ao chat e aos arquivos
     klog_write("\n[TAREFA 05] Inicializando Mutexes...\n");
-    mutex_init(&chat_mutex);
+    mutex_init(&chat_log_mutex);
+    mutex_init(&chat_queue_mutex);
     mutex_init(&arquivo_A_mutex);
     mutex_init(&arquivo_B_mutex);
     
-    // Criamos uma "thread" falsa para o kmain só para salvar o estado da pilha aqui antes de começar a trocar
-    klog_write("[TAREFA 05] Criando as threads dos clientes...\n");
+    // Criamos as threads do servidor e dos clientes
+    klog_write("[TAREFA 05] Criando thread do servidor e clientes...\n");
+    create_thread(&thread_server, servidor_chat, 0);
     create_thread(&thread_c1, cliente_1, 1);
     create_thread(&thread_c2, cliente_2, 2);
+    create_thread(&thread_c3, cliente_3, 3);
 
-    current_thread = &thread_c1;
-    next_thread = &thread_c2;
-
-    klog_write("\n>> INICIANDO O CHAT (CUIDADO COM O DEADLOCK!) <<\n\n");
+    if (modo_seguro == 0) {
+        klog_write("\n>> MODO DEADLOCK: C1 e C2 podem travar recursos A/B <<\n");
+    } else {
+        klog_write("\n>> MODO SEGURO: hierarquia de travas evita deadlock <<\n");
+    }
+    klog_write(">> INICIANDO CHAT MULTI-USUARIO COM SERVIDOR <<\n\n");
     
-    // Dispara a primeira troca. O kmain vai dormir para sempre aqui.
-    switch_task(&thread_kmain.esp, current_thread->esp);
+    // Inicia o escalonador a partir do contexto do kmain
+    task_start(&thread_kmain);
     
     // Se o código chegar aqui, significa que o switch_task falhou, o que não deveria acontecer.
     klog_write("ERRO: O kernel voltou pro kmain!\n");

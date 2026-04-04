@@ -14,6 +14,9 @@ extern void switch_task(unsigned int *old_esp_ptr, unsigned int new_esp);
 // A função C que vai "gerar" uma thread nova
 void create_thread(thread_t *thread, void (*entry_point)(), int id);
 
+// Inicia o escalonador pulando do contexto atual para a primeira thread criada
+void task_start(thread_t *bootstrap_thread);
+
 // Variáveis globais para controlar qual thread está rodando e qual é a próxima
 extern thread_t *current_thread;
 extern thread_t *next_thread;
